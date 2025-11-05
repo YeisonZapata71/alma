@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alma – Asistente de Soporte</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Icon pack: Phosphor Icons -->
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+  <style>
+    :root {
+  --bg-0: #0b0f1a;
+  --bg-1: #0f1424;
+  --bg-2: #11182b;
+  --txt-1: #e6ecff;
+  --txt-2: #b4c0e0;
+  --txt-3: #7f8fb2;
+  --accent-1: #7c6cff;
+  --accent-2: #00e0ff;
+  --accent-3: #ff70a6;
+  --success: #31d0aa;
+  --warning: #ffb84d;
+  --danger:  #ff4d6d;
+  --radius-2: 14px;
+  --radius-3: 18px;
+  --shadow-1: 0 10px 30px rgba(0,0,0,.35);
+  --shadow-2: 0 20px 50px rgba(10,20,50,.45);
+}
+
+body { 
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;  /*  permite scroll */
+  min-height: 100vh;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  min-height: 100vh; /*  no uses height:100% aquí */
+}
+
+/* Fondo animado */
+.bg-halo {
+  position: fixed;
+  inset: -20vh -10vw auto -10vw;
+  height: 60vh;
+  filter: blur(80px);
+  background:
+    radial-gradient(60% 60% at 50% 50%, rgba(124,108,255,.35), transparent 60%),
+    radial-gradient(40% 40% at 70% 40%, rgba(0,224,255,.25), transparent 60%),
+    radial-gradient(50% 50% at 30% 60%, rgba(255,112,166,.2), transparent 60%);
+  animation: floaty 12s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+@keyframes floaty { 0%,100%{ transform: translateY(0)} 50%{ transform: translateY(18px) } }
+
+/* Layout ajustable y scrollable */
+.layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  min-height: 100vh;   /* antes era height:100% */
+  position: relative;
+  z-index: 1;
+}
+
+/* Sidebar */
+.sidebar {
+  border-right: 1px solid rgba(255,255,255,.06);
+  background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0));
+  padding: 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow-y: auto;
+  height: auto;
+  min-height: 100%;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 26px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  backdrop-filter: blur(6px);
+  flex-shrink: 0;
+}
+.title { font-size: 18px; font-weight: 700; }
+.actions { display: flex; gap: 10px; }
+
+.chat {
+  flex: 1 1 auto;
+  padding: 22px;
+  overflow-y: auto;
+  max-height: none;
+}
+/* --- LLaMA visual enhancements --- */
+.banner-llama {
+  background: linear-gradient(90deg, rgba(124,108,255,.18), rgba(0,224,255,.18));
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.08);
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--accent-2);
+  font-weight: 600;
+  margin-bottom: 8px;
+  animation: fadeIn 1s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* glow effect */
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 8px rgba(124,108,255,.6); }
+  50% { box-shadow: 0 0 16px rgba(0,224,255,.8); }
+}
+
+/* Composer */
+.composer {
+  flex-shrink: 0;
+  padding: 16px 22px;
+  border-top: 1px solid rgba(255,255,255,.06);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.0));
+}
+/*  Estilos revisados para controles de voz  */
+/* Panel compacto para modo/voz */
+.controls {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 18px;
+  margin: 10px auto 6px;          /* centrado, poco margen */
+  background: rgba(13, 20, 40, 0.9);
+  border-radius: 999px;           /* pill */
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+}
+
+/* Truco: el contenedor padre centra el panel */
+.main > .controls {
+  display: flex;
+  justify-content: center;
+}
+/* Asegurar que el panel de modo no se estire verticalmente */
+#alma-controls {
+  align-self: start;   /* que use su propio alto, no el de toda la fila */
+}
+
+/* que el contenido dentro no se estire ni ocupe toda la fila */
+.mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+/* cuando haya controles de voz visibles (modo voz), que sigan siendo compactos */
+.voice-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+/* Botones pequeños y discretos */
+#btnPTT,
+#btnMuteTTS,
+#btnTTSProbe {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(20,25,45,0.9);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .15s ease, transform .1s ease;
+}
+#btnPTT:hover,
+#btnMuteTTS:hover,
+#btnTTSProbe:hover {
+  background: rgba(45,70,120,0.95);
+  transform: translateY(-1px);
+}
+
+/* Selector de voz más estrecho */
+#voiceSelect {
+  background: #182030;
+  border: 1px solid #444;
+  color: #eee;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 12px;
+  min-width: 180px;
+}
+
+#btnPTT,
+#btnMuteTTS,
+#btnTTSProbe {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(20,25,45,0.8);
+  color: #fff;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .2s ease, transform .15s ease;
+}
+#btnPTT:hover,
+#btnMuteTTS:hover,
+#btnTTSProbe:hover {
+  background: rgba(40,60,100,0.8);
+  transform: translateY(-1px);
+}
+
+#voiceSelect {
+  background: #182030;
+  border: 1px solid #444;
+  color: #eee;
+  border-radius: 8px;
+  padding: 6px;
+  min-width: 220px;
+}
+    * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif;
+        color: var(--txt-1);
+        background: linear-gradient(120deg, #0b0f1a, #0b1222 40%, #0b0f1a 100%);
+        background-attachment: fixed;
+
+/* Permitimos scroll vertical y mantenemos layout flex */
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        overflow-y: auto;
+      }
+/* Gradiente hallo */
+    .bg-halo {
+      position: fixed; inset: -20vh -10vw auto -10vw; height: 60vh; filter: blur(80px);
+      background: radial-gradient(60% 60% at 50% 50%, rgba(124,108,255,.35), transparent 60%),
+                  radial-gradient(40% 40% at 70% 40%, rgba(0,224,255,.25), transparent 60%),
+                  radial-gradient(50% 50% at 30% 60%, rgba(255,112,166,.2), transparent 60%);
+      animation: floaty 12s ease-in-out infinite;
+      pointer-events: none; z-index: 0;
+    }
+    @keyframes floaty { 0%,100%{ transform: translateY(0)} 50%{ transform: translateY(18px) } }
+
+    .layout { display: grid; grid-template-columns: 280px 1fr; height: 100%; position: relative; z-index: 1; }
+
+    /* Sidebar */
+    .sidebar {
+      border-right: 1px solid rgba(255,255,255,.06);
+      background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0));
+      padding: 22px 18px; display: flex; flex-direction: column; gap: 18px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-logo {
+      width: 44px; height: 44px; border-radius: 12px; position: relative; overflow: hidden;
+      background: radial-gradient(120% 120% at -20% 0%, var(--accent-1), transparent),
+                  radial-gradient(120% 120% at 120% 120%, var(--accent-2), transparent);
+      box-shadow: 0 8px 24px rgba(124,108,255,.35), inset 0 3px 10px rgba(255,255,255,.12);
+    }
+    .brand h1 { font-size: 20px; font-weight: 800; letter-spacing: .3px; margin: 0; }
+    .brand small { color: var(--txt-3); font-weight: 500; }
+
+    .status {
+      margin-top: 6px; display: flex; gap: 10px; flex-wrap: wrap;
+    }
+    .badge { padding: 6px 10px; border-radius: 999px; font-size: 12px; color: var(--txt-1);
+      background: linear-gradient(120deg, rgba(124,108,255,.25), rgba(0,224,255,.25));
+      border: 1px solid rgba(255,255,255,.08);
+    }
+
+    .group-title { margin: 18px 6px 6px; color: var(--txt-3); font-size: 12px; text-transform: uppercase; letter-spacing: .12em; }
+
+    .quick-list { display: grid; gap: 8px; }
+    .quick-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--radius-2);
+      background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06); cursor: pointer;
+      transition: transform .2s ease, background .2s ease, border-color .2s ease; }
+    .quick-item:hover { transform: translateY(-2px); background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.12); }
+    .quick-item i { color: var(--accent-2); font-size: 20px; animation: pulse 2.4s ease infinite; }
+    @keyframes pulse { 0%,100%{ transform: translateY(0)} 50%{ transform: translateY(-2px) } }
+
+    /* Contenido del menú */
+    .main { display: grid; grid-template-rows: auto 1fr auto; height: 100%; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; padding: 20px 26px; border-bottom: 1px solid rgba(255,255,255,.06);
+      backdrop-filter: blur(6px); }
+    .topbar .title { font-size: 18px; font-weight: 700; }
+    .topbar .actions { display: flex; gap: 10px; }
+    .btn {
+      appearance: none; border: none; cursor: pointer; color: var(--txt-1); font-weight: 600;
+      background: linear-gradient(120deg, rgba(124,108,255,.28), rgba(0,224,255,.28));
+      border: 1px solid rgba(255,255,255,.10); padding: 10px 14px; border-radius: 12px;
+      transition: transform .18s ease, box-shadow .18s ease; box-shadow: var(--shadow-1);
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-2); }
+
+    /* Área del chat */
+    .chat { padding: 22px; overflow-y: auto; }
+    .msg { max-width: 860px; margin: 0 auto 16px; display: grid; grid-template-columns: 44px 1fr; gap: 12px; }
+    .avatar { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, var(--accent-1), var(--accent-2)); display:grid; place-items:center; }
+    .avatar i { font-size: 22px; }
+
+    .bubble { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); border-radius: 16px; padding: 14px 16px; position: relative; }
+    .bubble.user { background: rgba(124,108,255,.08); border-color: rgba(124,108,255,.25); }
+
+    .meta { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; color: var(--txt-3); font-size: 12px; }
+    .tag { padding: 3px 8px; border-radius: 999px; border: 1px solid rgba(255,255,255,.1); }
+
+    .tools { display: flex; gap: 8px; margin-top: 10px; }
+    .tool-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 8px 10px; border-radius: 999px; background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.08); color: var(--txt-2); cursor: pointer; }
+    .tool-btn:hover { background: rgba(255,255,255,.08); }
+
+    .skeleton { position: relative; overflow: hidden; border-radius: 12px; background: rgba(255,255,255,.04); height: 88px; }
+    .skeleton::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.10), transparent);
+      transform: translateX(-100%); animation: shimmer 1.2s linear infinite; }
+    @keyframes shimmer { to { transform: translateX(100%); } }
+
+    /* Composer */
+    .composer { padding: 16px 22px; border-top: 1px solid rgba(255,255,255,.06); display: grid; grid-template-columns: 1fr auto; gap: 12px; background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.0)); }
+    .input {
+      display: flex; align-items: center; gap: 10px; background: var(--bg-2); border: 1px solid rgba(255,255,255,.08);
+      border-radius: var(--radius-3); padding: 12px 14px; }
+    .input input { flex: 1; background: transparent; border: none; outline: none; color: var(--txt-1); font-size: 15px; }
+    .send { display: inline-flex; align-items: center; gap: 8px; padding: 12px 16px; border-radius: var(--radius-3);
+      background: linear-gradient(120deg, var(--accent-1), var(--accent-2)); border: none; color: white; font-weight: 700; cursor: pointer; box-shadow: var(--shadow-1); }
+
+    /* Toast */
+    .toast { position: fixed; right: 16px; bottom: 16px; background: rgba(17,24,43,.92); border: 1px solid rgba(255,255,255,.08); color: var(--txt-1);
+      padding: 10px 14px; border-radius: 12px; box-shadow: var(--shadow-2); opacity: 0; transform: translateY(6px); transition: all .22s ease; z-index: 20; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    /* Responsive */
+    @media (max-width: 980px) { .layout { grid-template-columns: 1fr; } .sidebar { display: none; } }
+
+    /*estilos para voz */
+  .switch{position:relative;display:inline-block;width:46px;height:24px}
+  .switch input{opacity:0;width:0;height:0}
+  .slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;
+    background:#555;border-radius:24px;transition:.2s}
+  .slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;
+    background:white;border-radius:50%;transition:.2s}
+  .switch input:checked + .slider{background:#3a7}
+  .switch input:checked + .slider:before{transform:translateX(22px)}
+  #btnPTT{padding:6px 10px;border-radius:10px;border:1px solid #444;background:#223}
+  #btnMuteTTS{padding:6px 8px;border-radius:10px;border:1px solid #444;background:#223}
+  #voiceSelect{background:#182030;border:1px solid #444;color:#eee;border-radius:8px;padding:6px}
+  .autoplay{display:flex;gap:6px;align-items:center}
+  </style>
+</head>
+<body>
+  <div class="bg-halo"></div>
+  <div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo"></div>
+        <div>
+          <h1>Alma</h1>
+          <small>Asistente de Soporte</small>
+        </div>
+      </div>
+
+      <div class="status">
+        <span class="badge" id="status-badge">Verificando backend…</span>
+        <span class="badge">Semántico + Fuzzy</span>
+      </div>
+
+      <div class="group-title">Sugerencias rápidas</div>
+      <div class="quick-list" id="quick-list">
+        <div class="quick-item" data-q="El sistema no abre"> <i class="ph ph-rocket"></i> El sistema no abre </div>
+        <div class="quick-item" data-q="¿Cómo restablezco mi contraseña?"> <i class="ph ph-key"></i> Restablecer contraseña </div>
+        <div class="quick-item" data-q="Error 500 en la aplicación"> <i class="ph ph-warning"></i> Error 500 </div>
+        <div class="quick-item" data-q="¿Cómo exporto reportes?"> <i class="ph ph-file-arrow-down"></i> Exportar reportes </div>
+        <div class="quick-item" data-q="Aplicación muy lenta"> <i class="ph ph-gauge"></i> Aplicación lenta </div>
+      </div>
+    </aside>
+        <!-- Área principal -->
+    <main class="main">
+      <!-- Barra superior -->
+      <div class="topbar">
+        <div class="title">Panel de conversación</div>
+        <div class="actions">
+          <button class="btn" id="btn-clear">
+            <i class="ph ph-trash"></i>&nbsp;Limpiar
+          </button>
+          <button class="btn" id="btn-export">
+            <i class="ph ph-share-network"></i>&nbsp;Exportar
+          </button>
+        </div>
+      </div>
+
+      <!-- Controles de voz y modo -->
+      <div id="alma-controls" class="controls">
+        <div class="mode-toggle">
+          <label class="switch">
+            <input id="modeToggle" type="checkbox" />
+            <span class="slider"></span>
+          </label>
+          <span id="modeLabel">Modo: Texto</span>
+        </div>
+
+        <div class="voice-controls">
+          <button id="btnPTT" title="Mantén presionada para hablar (barra espaciadora)">
+            🎙️ Hablar
+          </button>
+
+          <label class="autoplay">
+            <input id="ttsAuto" type="checkbox" />
+            Leer respuestas
+          </label>
+
+          <select id="voiceSelect" title="Voz de lectura"></select>
+
+          <button id="btnTTSProbe" title="Probar voz">
+            🔊 Probar
+          </button>
+
+          <button id="btnMuteTTS" title="Silenciar lectura">
+            🔇
+          </button>
+        </div>
+      </div>
+
+      <!-- Historial de conversación -->
+      <section class="chat" id="chat"></section>
+
+      <!-- Caja de entrada -->
+      <div class="composer">
+        <div class="input">
+          <i class="ph ph-chat-circle-dots"></i>
+          <input id="text" placeholder="Escribe una pregunta para Alma…" autocomplete="off" />
+        </div>
+        <button class="send" id="send">
+          <i class="ph ph-paper-plane-tilt"></i> Enviar
+        </button>
+      </div>
+    </main>
+  <div class="toast" id="toast">Copiado ✅</div>
+
+  <script>
+    //  Configuración general 
+    const API_BASE = 'http://127.0.0.1:8000';
+
+    //  Ayudas UI 
+    const $ = sel => document.querySelector(sel);
+    const chat = $('#chat');
+
+    function toast(msg){
+      const t = $('#toast');
+      t.textContent = msg; t.classList.add('show');
+      setTimeout(()=> t.classList.remove('show'), 1600);
+    }
+        let isBusy = false;
+
+    function setBusyUI(busy) {
+  isBusy = busy;
+  const sendBtn  = $('#send');
+  const textInput = $('#text');
+  const micBtn   = document.querySelector('#btnPTT'); // este sí existe
+
+  if (sendBtn) sendBtn.disabled = busy;
+  if (textInput) textInput.disabled = busy;
+  if (micBtn) micBtn.disabled = busy;
+}
+    function el(html){
+      const temp = document.createElement('template');
+      temp.innerHTML = html.trim();
+      return temp.content.firstElementChild;
+    }
+
+    function msgUser(text){
+      const node = el(`
+        <div class="msg">
+          <div class="avatar"><i class="ph ph-user"></i></div>
+          <div class="bubble user">
+            <div class="meta"><span class="tag">Tú</span></div>
+            <div class="content"></div>
+          </div>
+        </div>`);
+      node.querySelector('.content').textContent = text;
+      chat.appendChild(node); chat.scrollTop = chat.scrollHeight;
+    }
+
+    function msgSkeleton(){
+      const node = el(`
+        <div class="msg" id="skeleton">
+          <div class="avatar"><i class="ph ph-sparkle"></i></div>
+          <div class="bubble">
+           <div class="meta"><span class="tag">Alma está pensando…</span></div>
+           <div class="skeleton"></div>
+          </div>
+        </div>`);
+      chat.appendChild(node); chat.scrollTop = chat.scrollHeight; return node;
+    }
+        function msgAssistant(payload) {
+      const { respuesta, confianza, metodo, sugerencias } = payload;
+      const confColor = confianza >= 80 ? 'var(--success)'
+        : (confianza >= 55 ? 'var(--warning)' : 'var(--danger)');
+      // ¿Viene de LLaMA?
+      const isLlama = typeof metodo === 'string' && metodo.toLowerCase().startsWith('llama');
+      const banner = isLlama
+        ? `<div class="banner-llama">✨ Respuesta generada por LLaMA (modo asistido)</div>`
+        : "";
+      const avatarStyle = isLlama
+        ? "background: linear-gradient(135deg, var(--accent-1), var(--accent-2)); box-shadow: 0 0 12px rgba(124,108,255,.7); animation: glow 2s ease-in-out infinite;"
+        : "background: linear-gradient(135deg, var(--accent-1), var(--accent-2));";
+      const node = el(`
+        <div class="msg">
+          <div class="avatar" style="${avatarStyle}">
+            <i class="ph ph-sparkle"></i>
+          </div>
+          <div class="bubble">
+            ${banner}
+            <div class="meta">
+              <span class="tag">Alma</span>
+              <span class="tag" title="Método">${metodo}</span>
+              <span class="tag" title="Confianza" style="border-color:${confColor}; color:${confColor}">
+                Confianza ${confianza}%
+              </span>
+            </div>
+            <div class="content" style="white-space: pre-wrap"></div>
+            <div class="tools">
+              <button class="tool-btn" data-act="copy"><i class="ph ph-copy"></i> Copiar</button>
+              <button class="tool-btn" data-act="like"><i class="ph ph-thumbs-up"></i> Me gusta</button>
+              <button class="tool-btn" data-act="dislike"><i class="ph ph-thumbs-down"></i> No me gusta</button>
+            </div>
+            <div class="meta" style="margin-top:10px; ${sugerencias?.length ? "" : "display:none"}">
+              <i class="ph ph-lightbulb"></i>
+              ${(sugerencias || []).slice(0, 3).map(s => `<span class="tag suggestion">${s}</span>`).join('')}
+            </div>
+          </div>
+        </div>`);
+// Animación tipo "escritura" solo si viene de LLaMA
+      const contentEl = node.querySelector('.content');
+              if (isLlama) {
+          let i = 0;
+          const text = respuesta;
+          const interval = setInterval(() => {
+            contentEl.textContent = text.slice(0, i++);
+            // mantener el scroll siempre al final mientras "escribe"
+            chat.scrollTop = chat.scrollHeight;
+            if (i > text.length) clearInterval(interval);
+          }, 20);
+        } else {
+          contentEl.textContent = respuesta;
+        }
+// Botones de acción (copiar / like / dislike)
+      node.querySelectorAll('.tool-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const act = btn.dataset.act;
+          if (act === 'copy') {
+            navigator.clipboard.writeText(respuesta);
+            toast('Respuesta copiada');
+          } else if (act === 'like') {
+            btn.classList.add('active');
+            toast('¡Gracias por el feedback!');
+          } else if (act === 'dislike') {
+            btn.classList.add('active');
+            toast('Anotado. Mejoraremos esta respuesta.');
+          }
+        });
+      });
+// Sugerencias clicables
+      node.querySelectorAll('.suggestion').forEach(sg => {
+        sg.addEventListener('click', () => ask(sg.textContent));
+      });
+      // Avisar al módulo de voz para que lea (si corresponde)
+      try {
+        if (typeof onAssistantResponseRendered === 'function') {
+          onAssistantResponseRendered(respuesta);
+        }
+      } catch (e) {
+        console.warn('TTS warn:', e);
+      }
+      chat.appendChild(node);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+        // Trabajando...
+        async function ask(text){
+      if(!text) return;
+      //  Si ya hay una respuesta en proceso, no envia otra
+      if (isBusy) {
+        toast('Espera a que Alma termine de responder antes de hacer otra pregunta.');
+        return;
+      }
+      msgUser(text);
+      const sk = msgSkeleton();
+      setBusyUI(true);
+      try{
+        const res = await fetch(`${API_BASE}/consulta`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pregunta: text })
+        });
+        const data = await res.json();
+        sk.remove();
+        msgAssistant(data);
+      }catch(err){
+        sk.remove();
+        msgAssistant({
+          respuesta: 'Error conectando con el backend en '+API_BASE,
+          confianza: 0,
+          metodo: 'error',
+          sugerencias: []
+        });
+      } finally {
+        setBusyUI(false);   //  Volver a habilitar UI (botón, micrófono, etc.)
+      }
+    }
+    //  Eventos 
+    $('#send').addEventListener('click', ()=>{
+      const v = $('#text').value.trim();
+      if(!v) return; $('#text').value = ''; ask(v);
+    });
+    $('#text').addEventListener('keydown', (e)=>{
+      if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); $('#send').click(); }
+    });
+    $('#btn-clear').addEventListener('click', ()=>{chat.innerHTML = '';stopTTS();     // detener cualquier lectura en curso
+    });
+        $('#btn-export').addEventListener('click', ()=>{const msgs = [...chat.querySelectorAll('.msg')];
+      if (!msgs.length) {
+        toast('No hay mensajes para exportar.');
+        return;
+      }
+      const lines = [];
+      const now = new Date();
+      lines.push('ALMA - Asistente de Soporte Técnico');
+      lines.push('Registro de conversación');
+      lines.push('Fecha: ' + now.toLocaleString('es-CO'));
+      lines.push('');
+      let esperandoRespuesta = false;
+      msgs.forEach(msg => {
+        const isUser = msg.querySelector('.avatar i').className.includes('user');
+        const txt = (msg.querySelector('.content')?.textContent || '').trim();
+        if (!txt) return;
+        if (isUser) {
+          if (esperandoRespuesta) {
+  // Si por alguna razón no hubo respuesta previa, separamos
+            lines.push('----------------------------------------');
+          }
+          lines.push('Pregunta:');
+          lines.push(txt);
+          lines.push('');
+          esperandoRespuesta = true;
+        } else {
+          lines.push('Respuesta:');
+          lines.push(txt);
+          lines.push('');
+          lines.push('----------------------------------------');
+          lines.push('');
+          esperandoRespuesta = false;
+        }
+      });
+      const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'conversacion_alma.txt';
+      a.click();
+    });
+
+
+  // Sidebar paquete de acciones
+    document.querySelectorAll('.quick-item').forEach(q=>{
+      q.addEventListener('click', ()=> ask(q.dataset.q));
+    });
+
+  // Check backend status
+    fetch(`${API_BASE}/`).then(r=>r.json()).then(info=>{
+      const ok = info.semantic_ready;
+      const badge = $('#status-badge');
+      badge.textContent = ok ? 'Backend listo • Semántico ON' : 'Backend no disponible';
+      badge.style.background = ok ? 'linear-gradient(120deg, rgba(49,208,170,.25), rgba(0,224,255,.25))' : 'linear-gradient(120deg, rgba(255,77,109,.25), rgba(255,184,77,.25))';
+    }).catch(()=>{
+      const badge = $('#status-badge');
+      badge.textContent = 'Backend no disponible';
+      badge.style.background = 'linear-gradient(120deg, rgba(255,77,109,.25), rgba(255,184,77,.25))';
+    });
+  </script>
+  <script>
+/* =========================
+   CONFIGURACIÓN BÁSICA PARA VOZ
+   ========================= */
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+const state = {
+  mode: localStorage.getItem('alma_mode') || 'text', // 'text' | 'voice'
+  ttsAuto: localStorage.getItem('alma_ttsAuto') === 'true',
+  ttsMuted: localStorage.getItem('alma_ttsMuted') === 'true',
+  recognizing: false,
+  recognition: null,
+  selectedVoiceURI: localStorage.getItem('alma_voiceURI') || null,
+};
+const elModeToggle  = document.getElementById('modeToggle');
+const elModeLabel   = document.getElementById('modeLabel');
+const elBtnPTT      = document.getElementById('btnPTT');
+const elTtsAuto     = document.getElementById('ttsAuto');
+const elBtnMuteTTS  = document.getElementById('btnMuteTTS');
+const elVoiceSelect = document.getElementById('voiceSelect');
+
+/* =========================
+   UI: MODO TEXTO / VOZ
+   ========================= */
+function initModeUI() {
+  const isVoice = state.mode === 'voice';
+  elModeToggle.checked = isVoice;
+  elModeLabel.textContent = isVoice ? 'Modo: Voz' : 'Modo: Texto';
+  document.querySelector('.voice-controls').style.display = isVoice ? 'flex' : 'none';
+}
+initModeUI();
+elModeToggle.addEventListener('change', () => {
+  state.mode = elModeToggle.checked ? 'voice' : 'text';
+  localStorage.setItem('alma_mode', state.mode);
+  initModeUI();
+});
+
+/* =========================
+   TTS (LECTURA DE RESPUESTAS)
+   ========================= */
+const synth = window.speechSynthesis;
+
+function loadVoices(){
+  const voices = synth.getVoices();
+  elVoiceSelect.innerHTML = '';
+  voices.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v.voiceURI;
+    opt.textContent = `${v.name} (${v.lang})`;
+    elVoiceSelect.appendChild(opt);
+  });
+  if (state.selectedVoiceURI){
+    elVoiceSelect.value = state.selectedVoiceURI;
+  }
+}
+// Carga de voces (En Chrome se carga de forma asíncrona)
+if ('speechSynthesis' in window){
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+  loadVoices();
+}
+elVoiceSelect.addEventListener('change', () => {
+  state.selectedVoiceURI = elVoiceSelect.value;
+  localStorage.setItem('alma_voiceURI', state.selectedVoiceURI);
+});
+// Sincronizar checkbox "Leer respuestas" con el estado
+elTtsAuto.checked = state.ttsAuto;
+elTtsAuto.addEventListener('change', () => {
+  state.ttsAuto = elTtsAuto.checked;
+  localStorage.setItem('alma_ttsAuto', state.ttsAuto);
+
+  // Si el usuario activa "Leer respuestas", desmutear automáticamente
+  if (state.ttsAuto) {
+    state.ttsMuted = false;
+    localStorage.setItem('alma_ttsMuted', state.ttsMuted);
+    elBtnMuteTTS.textContent = '🔇';
+  }
+});
+
+// Botón de mute / unmute
+elBtnMuteTTS.addEventListener('click', () => {
+  state.ttsMuted = !state.ttsMuted;
+  localStorage.setItem('alma_ttsMuted', state.ttsMuted);
+  elBtnMuteTTS.textContent = state.ttsMuted ? '🔈' : '🔇';
+  if (state.ttsMuted && synth.speaking) synth.cancel();
+});
+
+// Estado inicial del icono
+elBtnMuteTTS.textContent = state.ttsMuted ? '🔈' : '🔇';
+// 🔊 Probar voz
+document.getElementById('btnTTSProbe')?.addEventListener('click', () => {
+  state.ttsMuted = false;
+  localStorage.setItem('alma_ttsMuted', state.ttsMuted);
+  elBtnMuteTTS.textContent = '🔇';
+  speak('Prueba de voz de Alma. Si me escuchas, todo está correcto.');
+});
+
+// detener TTS
+function stopTTS() {
+  try {
+    if (synth && synth.speaking) synth.cancel();
+  } catch (e) {}
+}
+window.addEventListener('beforeunload', stopTTS);
+
+// función principal de lectura
+function speak(text){
+  if (!text || state.ttsMuted) return;
+  if (!('speechSynthesis' in window)) return;
+
+  try { window.speechSynthesis.cancel(); } catch(e){}
+  try { window.speechSynthesis.resume(); } catch(e){}
+
+  const clean = String(text)
+    .replace(/[*#`>_]/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+
+  if (!clean) return;
+
+  const u = new SpeechSynthesisUtterance(clean);
+
+  const voices = synth.getVoices();
+  const selected = voices.find(v => v.voiceURI === state.selectedVoiceURI);
+  if (selected) u.voice = selected;
+
+  u.rate = 1.0;
+  u.pitch = 1.0;
+  u.volume = 1.0;
+
+  setTimeout(() => {
+    try { synth.speak(u); } catch(e) { console.warn('TTS error:', e); }
+  }, 50);
+}
+
+/* =========================
+   STT (RECONOCIMIENTO DE VOZ)
+   ========================= */
+function initRecognition(){
+  if (!SpeechRecognition) return;
+  if (state.recognition) return;
+
+  const rec = new SpeechRecognition();
+  rec.lang = 'es-ES';
+  rec.interimResults = false;
+  rec.continuous = false;
+
+  rec.onstart = () => {
+    state.recognizing = true;
+    elBtnPTT.textContent = '🎙️ Escuchando...';
+  };
+  rec.onend = () => {
+    state.recognizing = false;
+    elBtnPTT.textContent = '🎙️ Hablar';
+  };
+  rec.onerror = (e) => { console.warn('STT error:', e); };
+
+  rec.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    const input   = document.querySelector('#text');
+    const sendBtn = document.querySelector('#send');
+
+    if (input) input.value = transcript;
+    if (sendBtn) {
+      sendBtn.click();
+    } else if (typeof ask === 'function') {
+      ask(transcript);
+    }
+  };
+
+  state.recognition = rec;
+}
+initRecognition();
+
+// Botón Hablar (push-to-talk)
+elBtnPTT.addEventListener('mousedown', () => {
+  if (state.mode !== 'voice' || !state.recognition) return;
+  if (!state.recognizing) state.recognition.start();
+});
+elBtnPTT.addEventListener('mouseup', () => {
+  if (state.mode !== 'voice' || !state.recognition) return;
+  if (state.recognizing) state.recognition.stop();
+});
+
+// Barra espaciadora como push-to-talk (solo si NO estoy escribiendo en un campo de texto)
+window.addEventListener('keydown', (e) => {
+  if (state.mode !== 'voice' || !state.recognition) return;
+  if (e.code !== 'Space' || state.recognizing) return;
+
+  const tag = e.target.tagName.toLowerCase();
+  const isTypingField =
+    tag === 'input' ||
+    tag === 'textarea' ||
+    e.target.isContentEditable;
+
+  // Si estoy escribiendo en un campo, NO usamos la barra como PTT
+  if (isTypingField) return;
+
+  e.preventDefault();
+  state.recognition.start();
+});
+
+window.addEventListener('keyup', (e) => {
+  if (state.mode !== 'voice' || !state.recognition) return;
+  if (e.code !== 'Space' || !state.recognizing) return;
+
+  const tag = e.target.tagName.toLowerCase();
+  const isTypingField =
+    tag === 'input' ||
+    tag === 'textarea' ||
+    e.target.isContentEditable;
+
+  if (isTypingField) return;
+
+  e.preventDefault();
+  state.recognition.stop();
+});
+
+// Atajo: tecla V cambia modo texto/voz
+window.addEventListener('keydown', (e) => {
+  if (e.key.toLowerCase() === 'v'){
+    elModeToggle.checked = !elModeToggle.checked;
+    elModeToggle.dispatchEvent(new Event('change'));
+  }
+});
+
+/* =========================
+   PUENTE CON EL BACKEND - Lee las respuestas
+   ========================= */
+function onAssistantResponseRendered(plainText){
+  // Si no hay texto válido, nada que hacer
+  if (!plainText || typeof plainText !== 'string') return;
+
+  // Si el micrófono está escuchando, NO leer (regla que pediste)
+  if (state.recognizing) return;
+
+  // ¿Debemos leer?
+  let autoPlay = false;
+
+  if (state.mode === 'voice') {
+    // En modo VOZ, queremos lectura automática
+    autoPlay = true;
+
+    // Si el usuario tiene activado "Leer respuestas",
+    // nos aseguramos de que NO esté muteado
+    if (elTtsAuto && elTtsAuto.checked) {
+      state.ttsMuted = false;
+      localStorage.setItem('alma_ttsMuted', state.ttsMuted);
+      elBtnMuteTTS.textContent = '🔇';
+    }
+  } else {
+    // En modo TEXTO respetamos el checkbox "Leer respuestas"
+    autoPlay = elTtsAuto ? elTtsAuto.checked : state.ttsAuto;
+  }
+
+  if (!autoPlay) return;
+  speak(plainText);
+}
+   </script>
+ </body>
+</html>

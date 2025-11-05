@@ -1,0 +1,14 @@
+# 1. Activar entorno
+.\.venv\Scripts\activate
+
+# 2. Importar tus datos
+python importar_csv_v2.py faqs_soporte_tecnico_full.csv
+
+# 3. Revisar contenido
+python verificar.py
+
+# 4. Crear índice FAISS
+python build_index.py
+
+# 5. Ejecutar el asistente híbrido semántico
+uvicorn app_semantico:app --reload
