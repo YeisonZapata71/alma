@@ -59,6 +59,57 @@ body {
 }
 @keyframes floaty { 0%,100%{ transform: translateY(0)} 50%{ transform: translateY(18px) } }
 
+/* Estado del backend arriba centrado*/
+@media (max-width: 768px) {
+  .status-container {
+    position: relative;
+    display: flex !important;
+    justify-content: center;
+    align-items: center;
+    margin: 10px 0;
+    text-align: center;
+    width: 100%;
+  }
+  .status-container .badge {
+    font-size: 0.85rem;
+    padding: 6px 12px;
+  }
+}
+/*Ver sugerencias de manera elegante*/
+@media (max-width: 768px) {
+  .suggestions {
+    display: flex !important;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 10px;
+    padding: 10px;
+    scrollbar-width: none; /* Firefox */
+  }
+  .suggestions::-webkit-scrollbar {
+    display: none; /* Chrome */
+  }
+  .suggestions button {
+    flex-shrink: 0;
+    font-size: 0.9rem;
+    padding: 8px 14px;
+  }
+}
+/*Centrar controles de voz en una sola columna*/
+@media (max-width: 768px) {
+  .voice-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    overflow: hidden;
+  }
+  .voice-controls select,
+  .voice-controls button {
+    max-width: 90%;
+  }
+}
+
 /* Layout ajustable y scrollable */
 .layout {
   display: grid;
@@ -360,6 +411,36 @@ body {
   #btnMuteTTS{padding:6px 8px;border-radius:10px;border:1px solid #444;background:#223}
   #voiceSelect{background:#182030;border:1px solid #444;color:#eee;border-radius:8px;padding:6px}
   .autoplay{display:flex;gap:6px;align-items:center}
+
+  /* --- Ajustes Responsive finales --- */
+@media (max-width: 768px) {
+  .suggestions {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 10px;
+    padding: 10px 8px;
+    scrollbar-width: none;
+  }
+  .suggestions::-webkit-scrollbar { display: none; }
+  .suggestions button {
+    flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,.1);
+    background: rgba(255,255,255,.05);
+    color: #fff;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  .voice-controls, .controls {
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+}
+
   </style>
 </head>
 <body>
@@ -393,7 +474,7 @@ body {
     <main class="main">
       <!-- Barra superior -->
       <div class="topbar">
-        <div class="title">Panel de conversación</div>
+        <div class="title">Alma | Panel de conversación</div>
         <div class="actions">
           <button class="btn" id="btn-clear">
             <i class="ph ph-trash"></i>&nbsp;Limpiar
@@ -949,5 +1030,61 @@ function onAssistantResponseRendered(plainText){
   speak(plainText);
 }
    </script>
- </body>
+   <script>
+//  Compatibilidad botón ENVIAR en móviles 
+const sendButton = document.getElementById("send");
+const inputField = document.getElementById("text");
+
+function handleSend() {
+  const message = inputField.value.trim();
+  if (!message) return;
+  inputField.value = "";
+  ask(message);
+}
+
+if (sendButton) {
+  sendButton.addEventListener("click", handleSend);
+  sendButton.addEventListener("touchend", (e) => {
+    e.preventDefault();
+    handleSend();
+  });
+}
+
+//  Mostrar estado backend en móvil 
+const statusContainer = document.createElement("div");
+statusContainer.className = "status-container";
+statusContainer.innerHTML = '<span class="badge" id="mobile-status">Backend…</span>';
+document.querySelector(".topbar").after(statusContainer);
+
+fetch(`${API_BASE}/`).then(r => r.json()).then(info => {
+  const ok = info.semantic_ready;
+  const badge = document.getElementById('mobile-status');
+  badge.textContent = ok ? 'Backend listo • Semántico ON' : 'Backend no disponible';
+  badge.style.background = ok ? 
+    'linear-gradient(120deg, rgba(49,208,170,.25), rgba(0,224,255,.25))' :
+    'linear-gradient(120deg, rgba(255,77,109,.25), rgba(255,184,77,.25))';
+}).catch(()=>{
+  const badge = document.getElementById('mobile-status');
+  badge.textContent = 'Backend no disponible';
+  badge.style.background = 'linear-gradient(120deg, rgba(255,77,109,.25), rgba(255,184,77,.25))';
+});
+
+// Sugerencias rápidas en móvil 
+if (window.innerWidth < 768) {
+  const suggestions = document.createElement("div");
+  suggestions.className = "suggestions";
+  suggestions.innerHTML = `
+    <button data-q="El sistema no abre">El sistema no abre</button>
+    <button data-q="¿Cómo restablezco mi contraseña?">Restablecer contraseña</button>
+    <button data-q="Error 500 en la aplicación">Error 500</button>
+    <button data-q="¿Cómo exporto reportes?">Exportar reportes</button>
+    <button data-q="Aplicación muy lenta">Aplicación lenta</button>`;
+  document.querySelector(".topbar").after(suggestions);
+
+  suggestions.querySelectorAll("button").forEach(btn => {
+    btn.addEventListener("click", () => ask(btn.dataset.q));
+  });
+}
+      </script>
+  </body>
 </html>
