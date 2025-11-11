@@ -440,6 +440,34 @@ body {
     overflow-x: hidden;
   }
 }
+/*  Ajustes responsive para sugerencias  */
+@media (max-width: 768px) {
+  /* Contenedor de sugerencias: fila con scroll horizontal */
+  .quick-list {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 8px;
+    padding: 10px 8px;
+    margin: 0;
+    scrollbar-width: none; /* Firefox */
+  }
+  .quick-list::-webkit-scrollbar {
+    display: none; /* Chrome/Edge */
+  }
+
+  /* Cada sugerencia como "pill" compacta */
+  .quick-item {
+    flex: 0 0 auto;
+    min-width: auto;
+    white-space: nowrap;
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.14);
+  }
+}
 
   </style>
 </head>
@@ -526,7 +554,7 @@ body {
           <i class="ph ph-chat-circle-dots"></i>
           <input id="text" placeholder="Escribe una pregunta para Alma…" autocomplete="off" />
         </div>
-        <button class="send" id="send">
+        <button class="send" id="send-btn">
           <i class="ph ph-paper-plane-tilt"></i> Enviar
         </button>
       </div>
@@ -704,14 +732,41 @@ body {
         setBusyUI(false);   //  Volver a habilitar UI (botón, micrófono, etc.)
       }
     }
-    //  Eventos 
-    $('#send').addEventListener('click', ()=>{
-      const v = $('#text').value.trim();
-      if(!v) return; $('#text').value = ''; ask(v);
+      // ================== Eventos ==================
+  const sendBtn  = $('#send');
+  const inputBox = $('#text');
+
+  function handleSend() {
+    const v = inputBox.value.trim();
+    if (!v) return;
+    inputBox.value = '';
+    ask(v);                 // usa tu función global ask()
+  }
+
+  // Click en escritorio
+  if (sendBtn) {
+    sendBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      handleSend();
     });
-    $('#text').addEventListener('keydown', (e)=>{
-      if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); $('#send').click(); }
+
+    // Toque en móviles (Android / iOS)
+    sendBtn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      handleSend();
+    }, { passive: false });
+  }
+
+  // Enter en el input (sin Shift)
+  if (inputBox) {
+    inputBox.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSend();
+      }
     });
+  }
+
     $('#btn-clear').addEventListener('click', ()=>{chat.innerHTML = '';stopTTS();     // detener cualquier lectura en curso
     });
         $('#btn-export').addEventListener('click', ()=>{const msgs = [...chat.querySelectorAll('.msg')];
@@ -1041,14 +1096,14 @@ function handleSend() {
   inputField.value = "";
   ask(message);
 }
-
+/**
 if (sendButton) {
   sendButton.addEventListener("click", handleSend);
   sendButton.addEventListener("touchend", (e) => {
     e.preventDefault();
     handleSend();
   });
-}
+}**/
 
 //  Mostrar estado backend en móvil 
 const statusContainer = document.createElement("div");
